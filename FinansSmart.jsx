@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -66,6 +66,17 @@ const BUDGETS_INIT = [
 
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
 
+// ─── useWindowWidth ──────────────────────────────────────────────────────────
+function useWindowWidth() {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return width;
+}
+
 // ─── Modal ─────────────────────────────────────────────────────────────────
 function Modal({ title, onClose, children, t }) {
   return (
@@ -84,41 +95,43 @@ function Modal({ title, onClose, children, t }) {
 // ─── StatCard ───────────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, icon, color, t }) {
   return (
-    <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: 20 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-        <span style={{ fontSize: 13, color: t.muted }}>{label}</span>
-        <div style={{ width: 38, height: 38, borderRadius: 10, background: `${color}22`, display: "flex", alignItems: "center", justifyContent: "center", color }}>{icon}</div>
+    <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+        <span style={{ fontSize: 12, color: t.muted, lineHeight: 1.3 }}>{label}</span>
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: `${color}22`, display: "flex", alignItems: "center", justifyContent: "center", color, flexShrink: 0 }}>{icon}</div>
       </div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: t.text, marginBottom: 4, letterSpacing: -0.5 }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: t.muted }}>{sub}</div>}
+      <div style={{ fontSize: 18, fontWeight: 800, color: t.text, marginBottom: 3, letterSpacing: -0.5, wordBreak: "break-all" }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: t.muted }}>{sub}</div>}
     </div>
   );
 }
 
 // ─── DashboardView ──────────────────────────────────────────────────────────
-function DashboardView({ txns, totalIncome, totalExpense, balance, monthlyData, catPieData, budgetProgress, t, s, cats, openNewTx }) {
+function DashboardView({ txns, totalIncome, totalExpense, balance, monthlyData, catPieData, budgetProgress, t, s, cats, openNewTx, isMobile }) {
   const recent = txns.slice(0, 6);
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 14, marginBottom: 22 }}>
-        <StatCard label="Total Saldo" value={fmt(balance)} sub="Semua waktu" icon={<Wallet size={18} />} color="#6366f1" t={t} />
-        <StatCard label="Pemasukan Bulan Ini" value={fmt(totalIncome)} sub="Bulan berjalan" icon={<TrendingUp size={18} />} color="#10b981" t={t} />
-        <StatCard label="Pengeluaran Bulan Ini" value={fmt(totalExpense)} sub="Bulan berjalan" icon={<TrendingDown size={18} />} color="#f43f5e" t={t} />
-        <StatCard label="Selisih Bersih" value={fmt(totalIncome - totalExpense)} sub={totalIncome >= totalExpense ? "✅ Surplus" : "⚠️ Defisit"} icon={totalIncome >= totalExpense ? <TrendingUp size={18} /> : <TrendingDown size={18} />} color={totalIncome >= totalExpense ? "#10b981" : "#f43f5e"} t={t} />
+      {/* Stat cards: 2 columns on mobile, 4 on desktop */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fit,minmax(190px,1fr))", gap: isMobile ? 10 : 14, marginBottom: isMobile ? 14 : 22 }}>
+        <StatCard label="Total Saldo" value={fmt(balance)} sub="Semua waktu" icon={<Wallet size={16} />} color="#6366f1" t={t} />
+        <StatCard label="Pemasukan" value={fmtShort(totalIncome)} sub="Bulan ini" icon={<TrendingUp size={16} />} color="#10b981" t={t} />
+        <StatCard label="Pengeluaran" value={fmtShort(totalExpense)} sub="Bulan ini" icon={<TrendingDown size={16} />} color="#f43f5e" t={t} />
+        <StatCard label="Selisih Bersih" value={fmtShort(totalIncome - totalExpense)} sub={totalIncome >= totalExpense ? "✅ Surplus" : "⚠️ Defisit"} icon={totalIncome >= totalExpense ? <TrendingUp size={16} /> : <TrendingDown size={16} />} color={totalIncome >= totalExpense ? "#10b981" : "#f43f5e"} t={t} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 14, marginBottom: 22 }}>
+      {/* Charts: stack on mobile */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr", gap: isMobile ? 10 : 14, marginBottom: isMobile ? 14 : 22 }}>
         <div style={s.card}>
           <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: t.text }}>Arus Kas 6 Bulan Terakhir</h3>
-          <ResponsiveContainer width="100%" height={210}>
+          <ResponsiveContainer width="100%" height={isMobile ? 170 : 210}>
             <AreaChart data={monthlyData}>
               <defs>
                 <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.25} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
                 <linearGradient id="ge" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f43f5e" stopOpacity={0.25} /><stop offset="95%" stopColor="#f43f5e" stopOpacity={0} /></linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: t.muted }} />
-              <YAxis tickFormatter={fmtShort} tick={{ fontSize: 10, fill: t.muted }} width={64} />
+              <XAxis dataKey="month" tick={{ fontSize: 10, fill: t.muted }} />
+              <YAxis tickFormatter={fmtShort} tick={{ fontSize: 9, fill: t.muted }} width={isMobile ? 50 : 64} />
               <Tooltip formatter={(v, n) => [fmt(v), n === "pemasukan" ? "Pemasukan" : "Pengeluaran"]} contentStyle={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 8, color: t.text, fontSize: 12 }} />
               <Area type="monotone" dataKey="pemasukan" stroke="#10b981" fill="url(#gi)" strokeWidth={2.5} dot={false} />
               <Area type="monotone" dataKey="pengeluaran" stroke="#f43f5e" fill="url(#ge)" strokeWidth={2.5} dot={false} />
@@ -135,29 +148,30 @@ function DashboardView({ txns, totalIncome, totalExpense, balance, monthlyData, 
 
         <div style={s.card}>
           <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: t.text }}>Pengeluaran per Kategori</h3>
-          <ResponsiveContainer width="100%" height={140}>
+          <ResponsiveContainer width="100%" height={isMobile ? 120 : 140}>
             <PieChart>
-              <Pie data={catPieData} cx="50%" cy="50%" innerRadius={35} outerRadius={62} dataKey="value" paddingAngle={3}>
+              <Pie data={catPieData} cx="50%" cy="50%" innerRadius={30} outerRadius={isMobile ? 50 : 62} dataKey="value" paddingAngle={3}>
                 {catPieData.map((e, i) => <Cell key={i} fill={e.color} />)}
               </Pie>
               <Tooltip formatter={(v) => [fmt(v)]} contentStyle={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 8, color: t.text, fontSize: 12 }} />
             </PieChart>
           </ResponsiveContainer>
           <div style={{ marginTop: 6 }}>
-            {catPieData.slice(0, 5).map((item, i) => (
+            {catPieData.slice(0, 4).map((item, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: item.color, flexShrink: 0 }}></div>
-                  <span style={{ fontSize: 12, color: t.muted }}>{item.name}</span>
+                  <span style={{ fontSize: 11, color: t.muted }}>{item.name}</span>
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>{fmtShort(item.value)}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: t.text }}>{fmtShort(item.value)}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      {/* Budget + Recent: stack on mobile */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 10 : 14 }}>
         <div style={s.card}>
           <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: t.text }}>Status Anggaran Bulan Ini</h3>
           {budgetProgress.slice(0, 5).map((b, i) => (
@@ -170,8 +184,8 @@ function DashboardView({ txns, totalIncome, totalExpense, balance, monthlyData, 
                 <div style={{ height: "100%", width: `${b.pct}%`, background: b.pct >= 100 ? "#f43f5e" : b.pct >= 80 ? "#f59e0b" : "#10b981", borderRadius: 3 }}></div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
-                <span style={{ fontSize: 11, color: t.muted }}>{fmt(b.spent)}</span>
-                <span style={{ fontSize: 11, color: t.muted }}>/ {fmt(b.amount)}</span>
+                <span style={{ fontSize: 11, color: t.muted }}>{fmtShort(b.spent)}</span>
+                <span style={{ fontSize: 11, color: t.muted }}>/ {fmtShort(b.amount)}</span>
               </div>
             </div>
           ))}
@@ -183,14 +197,14 @@ function DashboardView({ txns, totalIncome, totalExpense, balance, monthlyData, 
             const cat = cats.find((c) => c.id === tx.categoryId);
             return (
               <div key={tx.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${t.border}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${cat?.color}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>{cat?.icon}</div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: t.text }}>{tx.note || cat?.name}</div>
-                    <div style={{ fontSize: 11, color: t.muted }}>{tx.date}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: `${cat?.color}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{cat?.icon}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: isMobile ? 120 : 160 }}>{tx.note || cat?.name}</div>
+                    <div style={{ fontSize: 10, color: t.muted }}>{tx.date}</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: tx.type === "income" ? "#10b981" : "#f43f5e" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: tx.type === "income" ? "#10b981" : "#f43f5e", flexShrink: 0 }}>
                   {tx.type === "income" ? "+" : "-"}{fmtShort(tx.amount)}
                 </div>
               </div>
@@ -203,53 +217,56 @@ function DashboardView({ txns, totalIncome, totalExpense, balance, monthlyData, 
 }
 
 // ─── TransactionsView ───────────────────────────────────────────────────────
-function TransactionsView({ txns, cats, search, setSearch, fType, setFType, fCat, setFCat, openNewTx, openEditTx, deleteTx, t, s }) {
+function TransactionsView({ txns, cats, search, setSearch, fType, setFType, fCat, setFCat, openNewTx, openEditTx, deleteTx, t, s, isMobile }) {
   return (
     <div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-          <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: t.muted }} />
-          <input style={{ ...s.input, paddingLeft: 36 }} placeholder="Cari transaksi, kategori, tag..." value={search} onChange={(e) => setSearch(e.target.value)} />
+      {/* Filter bar: stacked on mobile */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center", flexWrap: "wrap" }}>
+        <div style={{ position: "relative", flex: 1, minWidth: isMobile ? "auto" : 200 }}>
+          <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: t.muted }} />
+          <input style={{ ...s.input, paddingLeft: 34 }} placeholder="Cari transaksi..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <select style={{ ...s.input, width: "auto" }} value={fType} onChange={(e) => setFType(e.target.value)}>
-          <option value="all">Semua Jenis</option>
-          <option value="income">Pemasukan</option>
-          <option value="expense">Pengeluaran</option>
-        </select>
-        <select style={{ ...s.input, width: "auto" }} value={fCat} onChange={(e) => setFCat(e.target.value)}>
-          <option value="all">Semua Kategori</option>
-          {cats.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
-        </select>
-        <button onClick={openNewTx} style={{ ...s.btn(), display: "flex", alignItems: "center", gap: 6 }}><Plus size={15} /> Tambah</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <select style={{ ...s.input, flex: 1 }} value={fType} onChange={(e) => setFType(e.target.value)}>
+            <option value="all">Semua Jenis</option>
+            <option value="income">Pemasukan</option>
+            <option value="expense">Pengeluaran</option>
+          </select>
+          <select style={{ ...s.input, flex: 1 }} value={fCat} onChange={(e) => setFCat(e.target.value)}>
+            <option value="all">Semua</option>
+            {cats.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+          </select>
+          <button onClick={openNewTx} style={{ ...s.btn(), display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", padding: "10px 14px" }}><Plus size={14} /> {!isMobile && "Tambah"}</button>
+        </div>
       </div>
 
       <div style={s.card}>
         <div style={{ fontSize: 12, color: t.muted, marginBottom: 12 }}>{txns.length} transaksi ditemukan</div>
         {txns.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "48px 0", color: t.muted }}>
-            <div style={{ fontSize: 40, marginBottom: 10 }}>📭</div>
-            <div style={{ fontSize: 14 }}>Tidak ada transaksi yang sesuai</div>
+          <div style={{ textAlign: "center", padding: "40px 0", color: t.muted }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+            <div style={{ fontSize: 13 }}>Tidak ada transaksi yang sesuai</div>
           </div>
         ) : txns.map((tx) => {
           const cat = cats.find((c) => c.id === tx.categoryId);
           return (
-            <div key={tx.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid ${t.border}` }}>
-              <div style={{ width: 42, height: 42, borderRadius: 10, background: `${cat?.color}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{cat?.icon}</div>
+            <div key={tx.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${t.border}` }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: `${cat?.color}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{cat?.icon}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: t.text, marginBottom: 3 }}>{tx.note || cat?.name}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tx.note || cat?.name}</div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, color: t.muted }}>{tx.date}</span>
-                  <span style={{ fontSize: 11, padding: "1px 7px", borderRadius: 4, background: `${cat?.color}22`, color: cat?.color, fontWeight: 600 }}>{cat?.name}</span>
-                  {tx.tags.map((tag) => <span key={tag} style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: t.hover, color: t.muted }}>#{tag}</span>)}
+                  <span style={{ fontSize: 10, color: t.muted }}>{tx.date}</span>
+                  <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: `${cat?.color}22`, color: cat?.color, fontWeight: 600 }}>{cat?.name}</span>
+                  {!isMobile && tx.tags.map((tag) => <span key={tag} style={{ fontSize: 10, padding: "1px 5px", borderRadius: 4, background: t.hover, color: t.muted }}>#{tag}</span>)}
                 </div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: tx.type === "income" ? "#10b981" : "#f43f5e", letterSpacing: -0.3 }}>
-                  {tx.type === "income" ? "+" : "-"}{fmt(tx.amount)}
+                <div style={{ fontSize: isMobile ? 12 : 14, fontWeight: 800, color: tx.type === "income" ? "#10b981" : "#f43f5e", letterSpacing: -0.3 }}>
+                  {tx.type === "income" ? "+" : "-"}{isMobile ? fmtShort(tx.amount) : fmt(tx.amount)}
                 </div>
-                <div style={{ display: "flex", gap: 4, marginTop: 5, justifyContent: "flex-end" }}>
-                  <button onClick={() => openEditTx(tx)} style={{ background: t.hover, border: "none", borderRadius: 6, padding: "5px 8px", color: t.muted, cursor: "pointer" }}><Edit2 size={12} /></button>
-                  <button onClick={() => deleteTx(tx.id)} style={{ background: "#f43f5e18", border: "none", borderRadius: 6, padding: "5px 8px", color: "#f43f5e", cursor: "pointer" }}><Trash2 size={12} /></button>
+                <div style={{ display: "flex", gap: 4, marginTop: 4, justifyContent: "flex-end" }}>
+                  <button onClick={() => openEditTx(tx)} style={{ background: t.hover, border: "none", borderRadius: 6, padding: "4px 7px", color: t.muted, cursor: "pointer" }}><Edit2 size={11} /></button>
+                  <button onClick={() => deleteTx(tx.id)} style={{ background: "#f43f5e18", border: "none", borderRadius: 6, padding: "4px 7px", color: "#f43f5e", cursor: "pointer" }}><Trash2 size={11} /></button>
                 </div>
               </div>
             </div>
@@ -261,31 +278,31 @@ function TransactionsView({ txns, cats, search, setSearch, fType, setFType, fCat
 }
 
 // ─── CategoriesView ─────────────────────────────────────────────────────────
-function CategoriesView({ cats, txns, openNewCat, openEditCat, deleteCat, t, s }) {
+function CategoriesView({ cats, txns, openNewCat, openEditCat, deleteCat, t, s, isMobile }) {
   const total = (id) => txns.filter((tx) => tx.categoryId === id).reduce((a, b) => a + b.amount, 0);
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
         <button onClick={openNewCat} style={{ ...s.btn(), display: "flex", alignItems: "center", gap: 6 }}><Plus size={15} /> Tambah Kategori</button>
       </div>
       {["income", "expense"].map((type) => (
-        <div key={type} style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: t.muted, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+        <div key={type} style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: t.muted, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: type === "income" ? "#10b981" : "#f43f5e", display: "inline-block" }}></span>
             {type === "income" ? "Pemasukan" : "Pengeluaran"}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(230px,1fr))", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(230px,1fr))", gap: 10 }}>
             {cats.filter((c) => c.type === type).map((cat) => (
-              <div key={cat.id} style={{ ...s.card, display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 46, height: 46, borderRadius: 12, background: `${cat.color}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{cat.icon}</div>
+              <div key={cat.id} style={{ ...s.card, display: "flex", alignItems: "center", gap: 10, padding: 14 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: `${cat.color}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{cat.icon}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: t.text }}>{cat.name}</div>
-                  <div style={{ fontSize: 12, color: t.muted }}>Total: {fmt(total(cat.id))}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{cat.name}</div>
+                  <div style={{ fontSize: 11, color: t.muted }}>Total: {fmtShort(total(cat.id))}</div>
                 </div>
-                <div style={{ width: 10, height: 10, borderRadius: "50%", background: cat.color, flexShrink: 0 }}></div>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: cat.color, flexShrink: 0 }}></div>
                 <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                  <button onClick={() => openEditCat(cat)} style={{ background: t.hover, border: "none", borderRadius: 6, padding: "6px", color: t.muted, cursor: "pointer" }}><Edit2 size={13} /></button>
-                  <button onClick={() => deleteCat(cat.id)} style={{ background: "#f43f5e18", border: "none", borderRadius: 6, padding: "6px", color: "#f43f5e", cursor: "pointer" }}><Trash2 size={13} /></button>
+                  <button onClick={() => openEditCat(cat)} style={{ background: t.hover, border: "none", borderRadius: 6, padding: "6px", color: t.muted, cursor: "pointer" }}><Edit2 size={12} /></button>
+                  <button onClick={() => deleteCat(cat.id)} style={{ background: "#f43f5e18", border: "none", borderRadius: 6, padding: "6px", color: "#f43f5e", cursor: "pointer" }}><Trash2 size={12} /></button>
                 </div>
               </div>
             ))}
@@ -297,26 +314,33 @@ function CategoriesView({ cats, txns, openNewCat, openEditCat, deleteCat, t, s }
 }
 
 // ─── BudgetsView ────────────────────────────────────────────────────────────
-function BudgetsView({ budgetProgress, openNewBud, openEditBud, deleteBud, t, s }) {
+function BudgetsView({ budgetProgress, openNewBud, openEditBud, deleteBud, t, s, isMobile }) {
   const totalBudget = budgetProgress.reduce((a, b) => a + b.amount, 0);
   const totalSpent = budgetProgress.reduce((a, b) => a + b.spent, 0);
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 8 }}>
-        <div style={{ fontSize: 13, color: t.muted }}>
-          Anggaran: <strong style={{ color: t.text }}>{fmt(totalBudget)}</strong> &nbsp;|&nbsp; Terpakai: <strong style={{ color: "#f43f5e" }}>{fmt(totalSpent)}</strong> &nbsp;|&nbsp; Sisa: <strong style={{ color: "#10b981" }}>{fmt(Math.max(0, totalBudget - totalSpent))}</strong>
+      {/* Summary row: wraps on mobile */}
+      <div style={{ ...s.card, display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 14, alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? 12 : 20 }}>
+          {[["Anggaran", totalBudget, t.text], ["Terpakai", totalSpent, "#f43f5e"], ["Sisa", Math.max(0, totalBudget - totalSpent), "#10b981"]].map(([l, v, c]) => (
+            <div key={l}>
+              <div style={{ fontSize: 10, color: t.muted }}>{l}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: c }}>{fmtShort(v)}</div>
+            </div>
+          ))}
         </div>
-        <button onClick={openNewBud} style={{ ...s.btn(), display: "flex", alignItems: "center", gap: 6 }}><Plus size={15} /> Set Anggaran</button>
+        <button onClick={openNewBud} style={{ ...s.btn(), display: "flex", alignItems: "center", gap: 6 }}><Plus size={14} /> Set Anggaran</button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(290px,1fr))", gap: 14 }}>
+
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(290px,1fr))", gap: 12 }}>
         {budgetProgress.map((b, i) => (
           <div key={i} style={{ ...s.card, borderLeft: `4px solid ${b.pct >= 100 ? "#f43f5e" : b.pct >= 80 ? "#f59e0b" : "#10b981"}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 42, height: 42, borderRadius: 10, background: `${b.cat?.color}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{b.cat?.icon}</div>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: `${b.cat?.color}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{b.cat?.icon}</div>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: t.text }}>{b.cat?.name}</div>
-                  <div style={{ fontSize: 11, color: t.muted }}>Batas: {fmt(b.amount)}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: t.text }}>{b.cat?.name}</div>
+                  <div style={{ fontSize: 11, color: t.muted }}>Batas: {fmtShort(b.amount)}</div>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 4 }}>
@@ -324,25 +348,25 @@ function BudgetsView({ budgetProgress, openNewBud, openEditBud, deleteBud, t, s 
                 <button onClick={() => deleteBud(b.id)} style={{ background: "#f43f5e18", border: "none", borderRadius: 6, padding: "6px", color: "#f43f5e", cursor: "pointer" }}><Trash2 size={12} /></button>
               </div>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: b.pct >= 100 ? "#f43f5e" : b.pct >= 80 ? "#f59e0b" : "#10b981" }}>{b.pct}% terpakai</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{fmt(b.spent)}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{fmtShort(b.spent)}</span>
             </div>
-            <div style={{ height: 10, borderRadius: 5, background: t.border, overflow: "hidden", marginBottom: 6 }}>
-              <div style={{ height: "100%", width: `${b.pct}%`, background: b.pct >= 100 ? "#f43f5e" : b.pct >= 80 ? "#f59e0b" : "#10b981", borderRadius: 5 }}></div>
+            <div style={{ height: 8, borderRadius: 4, background: t.border, overflow: "hidden", marginBottom: 5 }}>
+              <div style={{ height: "100%", width: `${b.pct}%`, background: b.pct >= 100 ? "#f43f5e" : b.pct >= 80 ? "#f59e0b" : "#10b981", borderRadius: 4 }}></div>
             </div>
             <div style={{ fontSize: 12, color: t.muted }}>
               {b.pct >= 100
-                ? <span style={{ color: "#f43f5e", fontWeight: 700 }}>⚠️ Melebihi anggaran sebesar {fmt(b.spent - b.amount)}</span>
-                : <>Sisa: <span style={{ color: "#10b981", fontWeight: 700 }}>{fmt(b.amount - b.spent)}</span></>
+                ? <span style={{ color: "#f43f5e", fontWeight: 700 }}>⚠️ Melebihi {fmtShort(b.spent - b.amount)}</span>
+                : <>Sisa: <span style={{ color: "#10b981", fontWeight: 700 }}>{fmtShort(b.amount - b.spent)}</span></>
               }
             </div>
           </div>
         ))}
         {budgetProgress.length === 0 && (
-          <div style={{ ...s.card, textAlign: "center", padding: 48, gridColumn: "1/-1" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🎯</div>
-            <div style={{ color: t.muted, fontSize: 14 }}>Belum ada anggaran. Tambah anggaran untuk mulai tracking!</div>
+          <div style={{ ...s.card, textAlign: "center", padding: 40, gridColumn: "1/-1" }}>
+            <div style={{ fontSize: 40, marginBottom: 10 }}>🎯</div>
+            <div style={{ color: t.muted, fontSize: 13 }}>Belum ada anggaran. Tambah anggaran untuk mulai tracking!</div>
           </div>
         )}
       </div>
@@ -351,7 +375,7 @@ function BudgetsView({ budgetProgress, openNewBud, openEditBud, deleteBud, t, s 
 }
 
 // ─── ReportsView ────────────────────────────────────────────────────────────
-function ReportsView({ txns, cats, monthlyData, t, s }) {
+function ReportsView({ txns, cats, monthlyData, t, s, isMobile }) {
   const [from, setFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 2); return d.toISOString().split("T")[0]; });
   const [to, setTo] = useState(new Date().toISOString().split("T")[0]);
 
@@ -370,35 +394,38 @@ function ReportsView({ txns, cats, monthlyData, t, s }) {
 
   return (
     <div>
-      <div style={{ ...s.card, marginBottom: 18, display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontSize: 13, color: t.muted, whiteSpace: "nowrap" }}>Dari:</span>
-          <input type="date" style={{ ...s.input, width: "auto" }} value={from} onChange={(e) => setFrom(e.target.value)} />
+      {/* Date range filter */}
+      <div style={{ ...s.card, marginBottom: 14, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flex: 1, minWidth: 0 }}>
+          <span style={{ fontSize: 12, color: t.muted, whiteSpace: "nowrap" }}>Dari:</span>
+          <input type="date" style={{ ...s.input }} value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontSize: 13, color: t.muted, whiteSpace: "nowrap" }}>Sampai:</span>
-          <input type="date" style={{ ...s.input, width: "auto" }} value={to} onChange={(e) => setTo(e.target.value)} />
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flex: 1, minWidth: 0 }}>
+          <span style={{ fontSize: 12, color: t.muted, whiteSpace: "nowrap" }}>S/d:</span>
+          <input type="date" style={{ ...s.input }} value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
-        <span style={{ fontSize: 12, color: t.muted }}>{filtered.length} transaksi</span>
+        <span style={{ fontSize: 11, color: t.muted, whiteSpace: "nowrap" }}>{filtered.length} transaksi</span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 22 }}>
+      {/* Summary: 3 cards, stack on mobile */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 10, marginBottom: 14 }}>
         {[["Total Pemasukan", income, "#10b981"], ["Total Pengeluaran", expense, "#f43f5e"], ["Net Cashflow", income - expense, income - expense >= 0 ? "#10b981" : "#f43f5e"]].map(([l, v, c]) => (
-          <div key={l} style={{ ...s.card, textAlign: "center" }}>
-            <div style={{ fontSize: 12, color: t.muted, marginBottom: 8 }}>{l}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: c, letterSpacing: -0.5 }}>{fmt(v)}</div>
+          <div key={l} style={{ ...s.card, display: "flex", alignItems: "center", justifyContent: isMobile ? "space-between" : "center", flexDirection: isMobile ? "row" : "column", gap: 8 }}>
+            <div style={{ fontSize: 12, color: t.muted }}>{l}</div>
+            <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 800, color: c, letterSpacing: -0.5 }}>{fmtShort(v)}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      {/* Charts: stack on mobile */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
         <div style={s.card}>
-          <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: t.text }}>Tren Bulanan</h3>
-          <ResponsiveContainer width="100%" height={230}>
+          <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: t.text }}>Tren Bulanan</h3>
+          <ResponsiveContainer width="100%" height={isMobile ? 170 : 230}>
             <BarChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke={t.border} />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: t.muted }} />
-              <YAxis tickFormatter={fmtShort} tick={{ fontSize: 10, fill: t.muted }} width={64} />
+              <XAxis dataKey="month" tick={{ fontSize: 10, fill: t.muted }} />
+              <YAxis tickFormatter={fmtShort} tick={{ fontSize: 9, fill: t.muted }} width={isMobile ? 48 : 64} />
               <Tooltip formatter={(v, n) => [fmt(v), n === "pemasukan" ? "Pemasukan" : "Pengeluaran"]} contentStyle={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 8, color: t.text, fontSize: 12 }} />
               <Bar dataKey="pemasukan" fill="#10b981" radius={[4, 4, 0, 0]} />
               <Bar dataKey="pengeluaran" fill="#f43f5e" radius={[4, 4, 0, 0]} />
@@ -414,18 +441,18 @@ function ReportsView({ txns, cats, monthlyData, t, s }) {
         </div>
 
         <div style={s.card}>
-          <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: t.text }}>Rincian Pengeluaran</h3>
-          {catData.length === 0 ? <div style={{ color: t.muted, textAlign: "center", paddingTop: 48, fontSize: 13 }}>Tidak ada data pengeluaran</div> :
+          <h3 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: t.text }}>Rincian Pengeluaran</h3>
+          {catData.length === 0 ? <div style={{ color: t.muted, textAlign: "center", paddingTop: 40, fontSize: 13 }}>Tidak ada data pengeluaran</div> :
             catData.map((item, i) => {
               const pct = Math.round(item.value / catData[0].value * 100);
               return (
-                <div key={i} style={{ marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                    <span style={{ fontSize: 13, color: t.text }}>{item.name}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: t.text }}>{fmt(item.value)}</span>
+                <div key={i} style={{ marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, color: t.text }}>{item.name}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>{fmtShort(item.value)}</span>
                   </div>
-                  <div style={{ height: 7, borderRadius: 4, background: t.border, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${pct}%`, background: item.color, borderRadius: 4 }}></div>
+                  <div style={{ height: 6, borderRadius: 3, background: t.border, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${pct}%`, background: item.color, borderRadius: 3 }}></div>
                   </div>
                 </div>
               );
@@ -440,16 +467,16 @@ function ReportsView({ txns, cats, monthlyData, t, s }) {
 // ─── AuthPage ───────────────────────────────────────────────────────────────
 function AuthPage({ authTab, setAuthTab, loginF, setLoginF, regF, setRegF, err, setErr, handleLogin, handleReg, t, s, dark, setDark }) {
   return (
-    <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+    <div style={{ minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ width: 64, height: 64, borderRadius: 18, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 30, marginBottom: 14 }}>💰</div>
-          <h1 style={{ margin: "0 0 6px", fontSize: 26, fontWeight: 900, color: t.text, letterSpacing: -0.5 }}>FinansSmart</h1>
-          <p style={{ margin: 0, color: t.muted, fontSize: 14 }}>Kelola keuanganmu dengan lebih cerdas</p>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ width: 60, height: 60, borderRadius: 18, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 12 }}>💰</div>
+          <h1 style={{ margin: "0 0 6px", fontSize: 24, fontWeight: 900, color: t.text, letterSpacing: -0.5 }}>FinansSmart</h1>
+          <p style={{ margin: 0, color: t.muted, fontSize: 13 }}>Kelola keuanganmu dengan lebih cerdas</p>
         </div>
 
         <div style={{ ...s.card, boxShadow: dark ? "0 24px 64px rgba(0,0,0,.5)" : "0 24px 64px rgba(0,0,0,.08)" }}>
-          <div style={{ display: "flex", background: t.input, borderRadius: 9, padding: 4, marginBottom: 22 }}>
+          <div style={{ display: "flex", background: t.input, borderRadius: 9, padding: 4, marginBottom: 20 }}>
             {["login", "register"].map((tab) => (
               <button key={tab} onClick={() => { setAuthTab(tab); setErr(""); }}
                 style={{ flex: 1, padding: "9px", borderRadius: 6, border: "none", background: authTab === tab ? t.surface : "transparent", color: authTab === tab ? t.text : t.muted, fontWeight: authTab === tab ? 700 : 400, fontSize: 13, cursor: "pointer" }}>
@@ -511,7 +538,12 @@ export default function App() {
   const [authTab, setAuthTab] = useState("login");
   const [user, setUser] = useState(null);
   const [view, setView] = useState("dashboard");
-  const [sidebar, setSidebar] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const windowWidth = useWindowWidth();
+  const isMobile = windowWidth < 768;
+  const isTablet = windowWidth >= 768 && windowWidth < 1024;
+  const showFixedSidebar = windowWidth >= 1024;
 
   const [txns, setTxns] = useState(TXNS_INIT);
   const [cats, setCats] = useState(CATS_INIT);
@@ -534,6 +566,11 @@ export default function App() {
   const [fType, setFType] = useState("all");
   const [fCat, setFCat] = useState("all");
   const [notifOpen, setNotifOpen] = useState(false);
+
+  // Close sidebar on mobile when view changes
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [view, isMobile]);
 
   // Theme
   const t = useMemo(() => ({
@@ -585,7 +622,7 @@ export default function App() {
   const notifs = useMemo(() => {
     const list = [];
     budgetProgress.forEach((b) => {
-      if (b.pct >= 100) list.push({ type: "danger", msg: `Budget ${b.cat?.name} sudah habis! (${Math.min(b.pct,999)}%)` });
+      if (b.pct >= 100) list.push({ type: "danger", msg: `Budget ${b.cat?.name} sudah habis! (${Math.min(b.pct, 999)}%)` });
       else if (b.pct >= 80) list.push({ type: "warning", msg: `Budget ${b.cat?.name} hampir habis (${b.pct}%)` });
     });
     if (balance < 1000000) list.push({ type: "danger", msg: "⚠️ Saldo total kurang dari Rp 1 juta!" });
@@ -646,10 +683,10 @@ export default function App() {
 
   // Style helpers
   const s = {
-    card: { background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: 20 },
+    card: { background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: isMobile ? 14 : 20 },
     input: { width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${t.border}`, background: t.input, color: t.text, fontSize: 14, outline: "none", boxSizing: "border-box" },
     btn: (color = "#6366f1", outline = false) => ({
-      padding: "10px 20px", borderRadius: 8, border: `1px solid ${outline ? color : "transparent"}`,
+      padding: "10px 18px", borderRadius: 8, border: `1px solid ${outline ? color : "transparent"}`,
       background: outline ? "transparent" : color, color: outline ? color : "#fff",
       cursor: "pointer", fontSize: 14, fontWeight: 700,
     }),
@@ -665,83 +702,123 @@ export default function App() {
   }
 
   const navItems = [
-    { id: "dashboard", icon: <LayoutDashboard size={17} />, label: "Dashboard" },
-    { id: "transactions", icon: <ArrowUpCircle size={17} />, label: "Transaksi" },
-    { id: "categories", icon: <Tag size={17} />, label: "Kategori" },
-    { id: "budgets", icon: <Target size={17} />, label: "Anggaran" },
-    { id: "reports", icon: <BarChart2 size={17} />, label: "Laporan" },
+    { id: "dashboard", icon: <LayoutDashboard size={18} />, label: "Dashboard" },
+    { id: "transactions", icon: <ArrowUpCircle size={18} />, label: "Transaksi" },
+    { id: "categories", icon: <Tag size={18} />, label: "Kategori" },
+    { id: "budgets", icon: <Target size={18} />, label: "Anggaran" },
+    { id: "reports", icon: <BarChart2 size={18} />, label: "Laporan" },
   ];
+
+  // Sidebar content
+  const SidebarContent = () => (
+    <aside style={{
+      width: 236, background: t.surface, borderRight: `1px solid ${t.border}`,
+      display: "flex", flexDirection: "column", padding: 18, flexShrink: 0,
+      height: "100%", overflowY: "auto",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, paddingBottom: 16, borderBottom: `1px solid ${t.border}` }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>💰</div>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 14, color: t.text }}>FinansSmart</div>
+          <div style={{ fontSize: 10, color: t.muted }}>Financial Dashboard</div>
+        </div>
+        {/* Close button for mobile overlay */}
+        {!showFixedSidebar && (
+          <button onClick={() => setSidebarOpen(false)} style={{ marginLeft: "auto", background: "transparent", border: "none", color: t.muted, cursor: "pointer" }}>
+            <X size={18} />
+          </button>
+        )}
+      </div>
+
+      <nav style={{ flex: 1 }}>
+        {navItems.map((item) => (
+          <div key={item.id} style={s.navItem(view === item.id)} onClick={() => { setView(item.id); if (!showFixedSidebar) setSidebarOpen(false); }}>
+            {item.icon} <span>{item.label}</span>
+          </div>
+        ))}
+      </nav>
+
+      {notifs.length > 0 && (
+        <div style={{ padding: "10px 12px", borderRadius: 8, background: "#f59e0b18", border: "1px solid #f59e0b40", marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: "#f59e0b", fontWeight: 700 }}>⚠ {notifs.length} peringatan aktif</div>
+          <div style={{ fontSize: 11, color: t.muted, marginTop: 3 }}>Cek anggaran kamu</div>
+        </div>
+      )}
+
+      <div style={{ paddingTop: 14, borderTop: `1px solid ${t.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", fontWeight: 800 }}>
+            {user?.name?.charAt(0).toUpperCase()}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.name}</div>
+            <div style={{ fontSize: 10, color: t.muted }}>Personal Account</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={() => setDark(!dark)} style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: `1px solid ${t.border}`, background: "transparent", color: t.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {dark ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
+          <button onClick={() => setLoggedIn(false)} style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: "1px solid #f43f5e44", background: "#f43f5e18", color: "#f43f5e", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <LogOut size={14} />
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: t.bg, color: t.text, fontFamily: "system-ui,-apple-system,sans-serif" }}>
-      {/* Sidebar */}
-      {sidebar && (
-        <aside style={{ width: 236, background: t.surface, borderRight: `1px solid ${t.border}`, display: "flex", flexDirection: "column", padding: 18, flexShrink: 0, position: "sticky", top: 0, height: "100vh", overflowY: "auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28, paddingBottom: 18, borderBottom: `1px solid ${t.border}` }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, flexShrink: 0 }}>💰</div>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: t.text }}>FinansSmart</div>
-              <div style={{ fontSize: 10, color: t.muted }}>Financial Dashboard</div>
-            </div>
-          </div>
 
-          <nav style={{ flex: 1 }}>
-            {navItems.map((item) => (
-              <div key={item.id} style={s.navItem(view === item.id)} onClick={() => setView(item.id)}>
-                {item.icon} <span>{item.label}</span>
-              </div>
-            ))}
-          </nav>
-
-          {notifs.length > 0 && (
-            <div style={{ padding: "10px 12px", borderRadius: 8, background: "#f59e0b18", border: "1px solid #f59e0b40", marginBottom: 12 }}>
-              <div style={{ fontSize: 12, color: "#f59e0b", fontWeight: 700 }}>⚠ {notifs.length} peringatan aktif</div>
-              <div style={{ fontSize: 11, color: t.muted, marginTop: 3 }}>Cek anggaran kamu</div>
-            </div>
-          )}
-
-          <div style={{ paddingTop: 14, borderTop: `1px solid ${t.border}` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", fontWeight: 800 }}>
-                {user?.name?.charAt(0).toUpperCase()}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.name}</div>
-                <div style={{ fontSize: 10, color: t.muted }}>Personal Account</div>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => setDark(!dark)} style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: `1px solid ${t.border}`, background: "transparent", color: t.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {dark ? <Sun size={14} /> : <Moon size={14} />}
-              </button>
-              <button onClick={() => setLoggedIn(false)} style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: "1px solid #f43f5e44", background: "#f43f5e18", color: "#f43f5e", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <LogOut size={14} />
-              </button>
-            </div>
-          </div>
-        </aside>
+      {/* ── Desktop / Tablet Fixed Sidebar ── */}
+      {showFixedSidebar && (
+        <div style={{ position: "sticky", top: 0, height: "100vh", flexShrink: 0 }}>
+          <SidebarContent />
+        </div>
       )}
 
-      {/* Main content */}
-      <main style={{ flex: 1, overflow: "auto", minWidth: 0 }}>
+      {/* ── Mobile / Tablet Overlay Sidebar ── */}
+      {!showFixedSidebar && sidebarOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setSidebarOpen(false)}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 90 }}
+          />
+          {/* Drawer */}
+          <div style={{ position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 100, height: "100vh" }}>
+            <SidebarContent />
+          </div>
+        </>
+      )}
+
+      {/* ── Main content ── */}
+      <main style={{ flex: 1, overflow: "auto", minWidth: 0, display: "flex", flexDirection: "column" }}>
+
         {/* Topbar */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 22px", borderBottom: `1px solid ${t.border}`, background: t.surface, position: "sticky", top: 0, zIndex: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={() => setSidebar(!sidebar)} style={{ background: "transparent", border: "none", color: t.muted, cursor: "pointer", padding: 4 }}><Menu size={20} /></button>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: isMobile ? "12px 14px" : "14px 22px",
+          borderBottom: `1px solid ${t.border}`, background: t.surface,
+          position: "sticky", top: 0, zIndex: 10,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 12 }}>
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "transparent", border: "none", color: t.muted, cursor: "pointer", padding: 4 }}><Menu size={20} /></button>
             <div>
-              <h1 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.text }}>{navItems.find((n) => n.id === view)?.label}</h1>
-              <div style={{ fontSize: 11, color: t.muted }}>{now.toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
+              <h1 style={{ margin: 0, fontSize: isMobile ? 15 : 17, fontWeight: 800, color: t.text }}>{navItems.find((n) => n.id === view)?.label}</h1>
+              {!isMobile && <div style={{ fontSize: 11, color: t.muted }}>{now.toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 10 }}>
+            {/* Notifications */}
             <div style={{ position: "relative" }}>
               <button onClick={() => setNotifOpen(!notifOpen)}
-                style={{ background: notifs.length ? "#f59e0b18" : "transparent", border: `1px solid ${notifs.length ? "#f59e0b55" : t.border}`, borderRadius: 8, padding: "8px 12px", color: notifs.length ? "#f59e0b" : t.muted, cursor: "pointer", position: "relative", display: "flex", alignItems: "center", gap: 6 }}>
+                style={{ background: notifs.length ? "#f59e0b18" : "transparent", border: `1px solid ${notifs.length ? "#f59e0b55" : t.border}`, borderRadius: 8, padding: "8px 10px", color: notifs.length ? "#f59e0b" : t.muted, cursor: "pointer", position: "relative", display: "flex", alignItems: "center" }}>
                 <Bell size={16} />
-                {notifs.length > 0 && <span style={{ position: "absolute", top: -5, right: -5, width: 17, height: 17, borderRadius: "50%", background: "#f43f5e", color: "#fff", fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{notifs.length}</span>}
+                {notifs.length > 0 && <span style={{ position: "absolute", top: -5, right: -5, width: 16, height: 16, borderRadius: "50%", background: "#f43f5e", color: "#fff", fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{notifs.length}</span>}
               </button>
               {notifOpen && (
-                <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 8, width: 300, ...s.card, boxShadow: "0 12px 40px rgba(0,0,0,.3)", zIndex: 50 }}>
+                <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 8, width: isMobile ? 260 : 300, ...s.card, boxShadow: "0 12px 40px rgba(0,0,0,.3)", zIndex: 50 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: t.text }}>🔔 Notifikasi</div>
                   {notifs.length === 0 ? <div style={{ fontSize: 13, color: t.muted }}>Semua berjalan dengan baik!</div> :
                     notifs.map((n, i) => (
@@ -754,20 +831,47 @@ export default function App() {
                 </div>
               )}
             </div>
-            <button onClick={openNewTx} style={{ ...s.btn(), display: "flex", alignItems: "center", gap: 6, padding: "9px 16px" }}>
-              <Plus size={15} /> Transaksi
+            {/* Dark mode toggle on mobile */}
+            {isMobile && (
+              <button onClick={() => setDark(!dark)} style={{ background: "transparent", border: `1px solid ${t.border}`, borderRadius: 8, padding: "8px 10px", color: t.muted, cursor: "pointer", display: "flex", alignItems: "center" }}>
+                {dark ? <Sun size={15} /> : <Moon size={15} />}
+              </button>
+            )}
+            <button onClick={openNewTx} style={{ ...s.btn(), display: "flex", alignItems: "center", gap: 5, padding: isMobile ? "9px 12px" : "9px 16px" }}>
+              <Plus size={15} />{!isMobile && " Transaksi"}
             </button>
           </div>
         </div>
 
         {/* Page content */}
-        <div style={{ padding: 22 }}>
-          {view === "dashboard" && <DashboardView txns={txns} totalIncome={totalIncome} totalExpense={totalExpense} balance={balance} monthlyData={monthlyData} catPieData={catPieData} budgetProgress={budgetProgress} t={t} s={s} cats={cats} openNewTx={openNewTx} />}
-          {view === "transactions" && <TransactionsView txns={filteredTxns} cats={cats} search={search} setSearch={setSearch} fType={fType} setFType={setFType} fCat={fCat} setFCat={setFCat} openNewTx={openNewTx} openEditTx={openEditTx} deleteTx={deleteTx} t={t} s={s} />}
-          {view === "categories" && <CategoriesView cats={cats} txns={txns} openNewCat={openNewCat} openEditCat={openEditCat} deleteCat={deleteCat} t={t} s={s} />}
-          {view === "budgets" && <BudgetsView budgetProgress={budgetProgress} openNewBud={openNewBud} openEditBud={openEditBud} deleteBud={deleteBud} t={t} s={s} />}
-          {view === "reports" && <ReportsView txns={txns} cats={cats} monthlyData={monthlyData} t={t} s={s} />}
+        <div style={{ padding: isMobile ? 12 : 22, paddingBottom: isMobile ? 80 : 22, flex: 1 }}>
+          {view === "dashboard" && <DashboardView txns={txns} totalIncome={totalIncome} totalExpense={totalExpense} balance={balance} monthlyData={monthlyData} catPieData={catPieData} budgetProgress={budgetProgress} t={t} s={s} cats={cats} openNewTx={openNewTx} isMobile={isMobile} />}
+          {view === "transactions" && <TransactionsView txns={filteredTxns} cats={cats} search={search} setSearch={setSearch} fType={fType} setFType={setFType} fCat={fCat} setFCat={setFCat} openNewTx={openNewTx} openEditTx={openEditTx} deleteTx={deleteTx} t={t} s={s} isMobile={isMobile} />}
+          {view === "categories" && <CategoriesView cats={cats} txns={txns} openNewCat={openNewCat} openEditCat={openEditCat} deleteCat={deleteCat} t={t} s={s} isMobile={isMobile} />}
+          {view === "budgets" && <BudgetsView budgetProgress={budgetProgress} openNewBud={openNewBud} openEditBud={openEditBud} deleteBud={deleteBud} t={t} s={s} isMobile={isMobile} />}
+          {view === "reports" && <ReportsView txns={txns} cats={cats} monthlyData={monthlyData} t={t} s={s} isMobile={isMobile} />}
         </div>
+
+        {/* ── Mobile Bottom Navigation Bar ── */}
+        {isMobile && (
+          <div style={{
+            position: "fixed", bottom: 0, left: 0, right: 0,
+            background: t.surface, borderTop: `1px solid ${t.border}`,
+            display: "flex", zIndex: 50, paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          }}>
+            {navItems.map((item) => (
+              <button key={item.id} onClick={() => setView(item.id)} style={{
+                flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                padding: "10px 4px 8px", background: "transparent", border: "none", cursor: "pointer",
+                color: view === item.id ? "#6366f1" : t.muted,
+                borderTop: view === item.id ? `2px solid #6366f1` : "2px solid transparent",
+              }}>
+                {item.icon}
+                <span style={{ fontSize: 9, marginTop: 3, fontWeight: view === item.id ? 700 : 400 }}>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </main>
 
       {/* ── Transaction Modal ── */}
