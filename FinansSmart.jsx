@@ -407,12 +407,12 @@ function ReportsView({ txns, cats, monthlyData, t, s, isMobile }) {
         <span style={{ fontSize: 11, color: t.muted, whiteSpace: "nowrap" }}>{filtered.length} transaksi</span>
       </div>
 
-      {/* Summary: 3 cards, stack on mobile */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 10, marginBottom: 14 }}>
-        {[["Total Pemasukan", income, "#10b981"], ["Total Pengeluaran", expense, "#f43f5e"], ["Net Cashflow", income - expense, income - expense >= 0 ? "#10b981" : "#f43f5e"]].map(([l, v, c]) => (
-          <div key={l} style={{ ...s.card, display: "flex", alignItems: "center", justifyContent: isMobile ? "space-between" : "center", flexDirection: isMobile ? "row" : "column", gap: 8 }}>
-            <div style={{ fontSize: 12, color: t.muted }}>{l}</div>
-            <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 800, color: c, letterSpacing: -0.5 }}>{fmtShort(v)}</div>
+      {/* Summary: 3 cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 14 }}>
+        {[["Pemasukan", income, "#10b981"], ["Pengeluaran", expense, "#f43f5e"], ["Net", income - expense, income - expense >= 0 ? "#10b981" : "#f43f5e"]].map(([l, v, c]) => (
+          <div key={l} style={{ ...s.card, textAlign: "center", padding: isMobile ? 10 : 20 }}>
+            <div style={{ fontSize: isMobile ? 10 : 12, color: t.muted, marginBottom: 4 }}>{l}</div>
+            <div style={{ fontSize: isMobile ? 13 : 20, fontWeight: 800, color: c, letterSpacing: -0.5 }}>{fmtShort(v)}</div>
           </div>
         ))}
       </div>
@@ -709,75 +709,92 @@ export default function App() {
     { id: "reports", icon: <BarChart2 size={18} />, label: "Laporan" },
   ];
 
-  // Sidebar content
-  const SidebarContent = () => (
-    <aside style={{
-      width: 260, background: t.surface, borderRight: `1px solid ${t.border}`,
-      display: "flex", flexDirection: "column", padding: "24px 20px", flexShrink: 0,
-      height: "100%", overflowY: "auto",
-      boxShadow: "10px 0 30px rgba(0,0,0,0.05)",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32, paddingBottom: 20, borderBottom: `1px solid ${t.border}` }}>
-        <div style={{ width: 42, height: 42, borderRadius: 12, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0, boxShadow: "0 8px 16px rgba(99,102,241,0.25)" }}>💰</div>
-        <div>
-          <div style={{ fontWeight: 800, fontSize: 16, color: t.text, letterSpacing: -0.5 }}>FinansSmart</div>
-          <div style={{ fontSize: 11, color: t.muted }}>Money Management</div>
+  // Sidebar content — compact on mobile so no internal scroll needed
+  const SidebarContent = () => {
+    const mob = !showFixedSidebar; // shorthand: mobile/tablet drawer mode
+    const vPad = mob ? 14 : 24;
+    const hPad = mob ? 14 : 20;
+    return (
+      <aside style={{
+        width: mob ? 240 : 260,
+        background: t.surface,
+        borderRight: `1px solid ${t.border}`,
+        display: "flex",
+        flexDirection: "column",
+        padding: `${vPad}px ${hPad}px`,
+        flexShrink: 0,
+        height: "100%",
+        overflowY: "hidden", // no scroll — content must fit
+        boxShadow: "10px 0 30px rgba(0,0,0,0.05)",
+        boxSizing: "border-box",
+      }}>
+        {/* Logo row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: mob ? 14 : 28, paddingBottom: mob ? 12 : 18, borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
+          <div style={{ width: mob ? 34 : 42, height: mob ? 34 : 42, borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: mob ? 16 : 20, flexShrink: 0 }}>💰</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: mob ? 14 : 16, color: t.text, letterSpacing: -0.5 }}>FinansSmart</div>
+            {!mob && <div style={{ fontSize: 10, color: t.muted }}>Money Management</div>}
+          </div>
+          {mob && (
+            <button onClick={() => setSidebarOpen(false)} style={{ marginLeft: "auto", background: t.hover, border: "none", color: t.muted, cursor: "pointer", width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <X size={15} />
+            </button>
+          )}
         </div>
-        {/* Close button for mobile overlay */}
-        {!showFixedSidebar && (
-          <button onClick={() => setSidebarOpen(false)} style={{ marginLeft: "auto", background: t.hover, border: "none", color: t.muted, cursor: "pointer", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <X size={18} />
-          </button>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, minHeight: 0 }}>
+          {!mob && <div style={{ fontSize: 10, fontWeight: 700, color: t.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, paddingLeft: 12 }}>Menu Utama</div>}
+          {navItems.map((item) => (
+            <div key={item.id}
+              style={{ display: "flex", alignItems: "center", gap: 10, padding: mob ? "9px 12px" : "10px 14px", borderRadius: 8, background: view === item.id ? "#6366f118" : "transparent", color: view === item.id ? "#6366f1" : t.muted, cursor: "pointer", fontSize: mob ? 13 : 14, fontWeight: view === item.id ? 700 : 400, marginBottom: mob ? 1 : 2 }}
+              onClick={() => { setView(item.id); if (mob) setSidebarOpen(false); }}>
+              <div style={{ width: 20, display: "flex", justifyContent: "center", flexShrink: 0 }}>{item.icon}</div>
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </nav>
+
+        {/* Notif alert — compact on mobile */}
+        {notifs.length > 0 && (
+          <div style={{ padding: mob ? "8px 10px" : "12px 14px", borderRadius: 10, background: "rgba(245,158,11,0.08)", border: `1px solid ${t.amber}33`, marginBottom: mob ? 10 : 16, flexShrink: 0 }}>
+            <div style={{ fontSize: mob ? 11 : 12, color: t.amber, fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}>
+              <Bell size={12} /> {notifs.length} Peringatan
+            </div>
+            {!mob && <p style={{ fontSize: 11, color: t.muted, margin: "4px 0 0" }}>Batas anggaran atau saldo perlu perhatian.</p>}
+          </div>
         )}
-      </div>
 
-      <nav style={{ flex: 1 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: t.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, paddingLeft: 14 }}>Menu Utama</div>
-        {navItems.map((item) => (
-          <div key={item.id} style={s.navItem(view === item.id)} onClick={() => { setView(item.id); if (!showFixedSidebar) setSidebarOpen(false); }}>
-            <div style={{ width: 24, display: "flex", justifyContent: "center" }}>{item.icon}</div>
-            <span>{item.label}</span>
+        {/* User row */}
+        <div style={{ paddingTop: mob ? 10 : 16, borderTop: `1px solid ${t.border}`, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: mob ? 8 : 14 }}>
+            <div style={{ width: mob ? 28 : 34, height: mob ? 28 : 34, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #4f46e5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: mob ? 11 : 13, color: "#fff", fontWeight: 800, flexShrink: 0 }}>
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: mob ? 12 : 13, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.name}</div>
+              {!mob && <div style={{ fontSize: 10, color: t.muted }}>Akun Personal</div>}
+            </div>
           </div>
-        ))}
-      </nav>
-
-      {notifs.length > 0 && (
-        <div style={{ padding: "14px", borderRadius: 12, background: "linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.05))", border: `1px solid ${t.amber}33`, marginBottom: 20 }}>
-          <div style={{ fontSize: 12, color: t.amber, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-             <Bell size={14} /> {notifs.length} Peringatan
-          </div>
-          <p style={{ fontSize: 11, color: t.muted, margin: "6px 0 0" }}>Batas anggaran atau saldo perlu perhatian.</p>
-        </div>
-      )}
-
-      <div style={{ paddingTop: 20, borderTop: `1px solid ${t.border}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, padding: "0 4px" }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #4f46e5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#fff", fontWeight: 800, border: `2px solid ${t.surface}` }}>
-            {user?.name?.charAt(0).toUpperCase()}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.name}</div>
-            <div style={{ fontSize: 11, color: t.muted }}>Akun Personal</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => setDark(!dark)} style={{ flex: 1, height: mob ? 32 : 36, borderRadius: 8, border: `1px solid ${t.border}`, background: t.hover, color: t.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {dark ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+            <button onClick={() => setLoggedIn(false)} style={{ flex: 1, height: mob ? 32 : 36, borderRadius: 8, border: "none", background: "#f43f5e15", color: "#f43f5e", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <LogOut size={14} />
+            </button>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => setDark(!dark)} style={{ flex: 1, height: 38, borderRadius: 10, border: `1px solid ${t.border}`, background: t.hover, color: t.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>
-            {dark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <button onClick={() => setLoggedIn(false)} style={{ flex: 1, height: 38, borderRadius: 10, border: "none", background: "#f43f5e15", color: "#f43f5e", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>
-            <LogOut size={16} />
-          </button>
-        </div>
-      </div>
-    </aside>
-  );
+      </aside>
+    );
+  };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: t.bg, color: t.text, fontFamily: "system-ui,-apple-system,sans-serif" }}>
 
-      {/* ── Desktop / Tablet Fixed Sidebar ── */}
+      {/* ── Desktop Fixed Sidebar ── */}
       {showFixedSidebar && (
-        <div style={{ position: "sticky", top: 0, height: "100vh", flexShrink: 0 }}>
+        <div style={{ position: "sticky", top: 0, height: "100vh", flexShrink: 0, zIndex: 20 }}>
           <SidebarContent />
         </div>
       )}
@@ -801,9 +818,10 @@ export default function App() {
           />
           {/* Drawer */}
           <div style={{ 
-            position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 100, height: "100vh",
+            position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 100,
+            height: "100dvh",
             transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
-            transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+            transition: "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
             boxShadow: sidebarOpen ? "20px 0 50px rgba(0,0,0,0.3)" : "none",
           }}>
             <SidebarContent />
@@ -822,7 +840,10 @@ export default function App() {
           position: "sticky", top: 0, zIndex: 10,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 12 }}>
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "transparent", border: "none", color: t.muted, cursor: "pointer", padding: 4 }}><Menu size={20} /></button>
+            {/* Show menu btn on mobile (to open drawer), hide on desktop with fixed sidebar */}
+            {!showFixedSidebar && (
+              <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "transparent", border: "none", color: t.muted, cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}><Menu size={20} /></button>
+            )}
             <div>
               <h1 style={{ margin: 0, fontSize: isMobile ? 15 : 17, fontWeight: 800, color: t.text }}>{navItems.find((n) => n.id === view)?.label}</h1>
               {!isMobile && <div style={{ fontSize: 11, color: t.muted }}>{now.toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>}
@@ -876,14 +897,15 @@ export default function App() {
           <div style={{
             position: "fixed", bottom: 0, left: 0, right: 0,
             background: t.surface, borderTop: `1px solid ${t.border}`,
-            display: "flex", zIndex: 50, paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            display: "flex", zIndex: 50,
+            paddingBottom: "env(safe-area-inset-bottom, 8px)",
           }}>
             {navItems.map((item) => (
               <button key={item.id} onClick={() => setView(item.id)} style={{
                 flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                padding: "10px 4px 8px", background: "transparent", border: "none", cursor: "pointer",
+                padding: "10px 4px 6px", background: "transparent", border: "none", cursor: "pointer",
                 color: view === item.id ? "#6366f1" : t.muted,
-                borderTop: view === item.id ? `2px solid #6366f1` : "2px solid transparent",
+                borderTop: view === item.id ? "2px solid #6366f1" : "2px solid transparent",
               }}>
                 {item.icon}
                 <span style={{ fontSize: 9, marginTop: 3, fontWeight: view === item.id ? 700 : 400 }}>{item.label}</span>
