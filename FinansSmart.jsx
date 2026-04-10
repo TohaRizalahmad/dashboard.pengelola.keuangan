@@ -712,55 +712,60 @@ export default function App() {
   // Sidebar content
   const SidebarContent = () => (
     <aside style={{
-      width: 236, background: t.surface, borderRight: `1px solid ${t.border}`,
-      display: "flex", flexDirection: "column", padding: 18, flexShrink: 0,
+      width: 260, background: t.surface, borderRight: `1px solid ${t.border}`,
+      display: "flex", flexDirection: "column", padding: "24px 20px", flexShrink: 0,
       height: "100%", overflowY: "auto",
+      boxShadow: "10px 0 30px rgba(0,0,0,0.05)",
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, paddingBottom: 16, borderBottom: `1px solid ${t.border}` }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>💰</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32, paddingBottom: 20, borderBottom: `1px solid ${t.border}` }}>
+        <div style={{ width: 42, height: 42, borderRadius: 12, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0, boxShadow: "0 8px 16px rgba(99,102,241,0.25)" }}>💰</div>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 14, color: t.text }}>FinansSmart</div>
-          <div style={{ fontSize: 10, color: t.muted }}>Financial Dashboard</div>
+          <div style={{ fontWeight: 800, fontSize: 16, color: t.text, letterSpacing: -0.5 }}>FinansSmart</div>
+          <div style={{ fontSize: 11, color: t.muted }}>Money Management</div>
         </div>
         {/* Close button for mobile overlay */}
         {!showFixedSidebar && (
-          <button onClick={() => setSidebarOpen(false)} style={{ marginLeft: "auto", background: "transparent", border: "none", color: t.muted, cursor: "pointer" }}>
+          <button onClick={() => setSidebarOpen(false)} style={{ marginLeft: "auto", background: t.hover, border: "none", color: t.muted, cursor: "pointer", width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={18} />
           </button>
         )}
       </div>
 
       <nav style={{ flex: 1 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: t.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, paddingLeft: 14 }}>Menu Utama</div>
         {navItems.map((item) => (
           <div key={item.id} style={s.navItem(view === item.id)} onClick={() => { setView(item.id); if (!showFixedSidebar) setSidebarOpen(false); }}>
-            {item.icon} <span>{item.label}</span>
+            <div style={{ width: 24, display: "flex", justifyContent: "center" }}>{item.icon}</div>
+            <span>{item.label}</span>
           </div>
         ))}
       </nav>
 
       {notifs.length > 0 && (
-        <div style={{ padding: "10px 12px", borderRadius: 8, background: "#f59e0b18", border: "1px solid #f59e0b40", marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: "#f59e0b", fontWeight: 700 }}>⚠ {notifs.length} peringatan aktif</div>
-          <div style={{ fontSize: 11, color: t.muted, marginTop: 3 }}>Cek anggaran kamu</div>
+        <div style={{ padding: "14px", borderRadius: 12, background: "linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.05))", border: `1px solid ${t.amber}33`, marginBottom: 20 }}>
+          <div style={{ fontSize: 12, color: t.amber, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+             <Bell size={14} /> {notifs.length} Peringatan
+          </div>
+          <p style={{ fontSize: 11, color: t.muted, margin: "6px 0 0" }}>Batas anggaran atau saldo perlu perhatian.</p>
         </div>
       )}
 
-      <div style={{ paddingTop: 14, borderTop: `1px solid ${t.border}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", fontWeight: 800 }}>
+      <div style={{ paddingTop: 20, borderTop: `1px solid ${t.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, padding: "0 4px" }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #4f46e5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#fff", fontWeight: 800, border: `2px solid ${t.surface}` }}>
             {user?.name?.charAt(0).toUpperCase()}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.name}</div>
-            <div style={{ fontSize: 10, color: t.muted }}>Personal Account</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.name}</div>
+            <div style={{ fontSize: 11, color: t.muted }}>Akun Personal</div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => setDark(!dark)} style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: `1px solid ${t.border}`, background: "transparent", color: t.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {dark ? <Sun size={14} /> : <Moon size={14} />}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setDark(!dark)} style={{ flex: 1, height: 38, borderRadius: 10, border: `1px solid ${t.border}`, background: t.hover, color: t.muted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          <button onClick={() => setLoggedIn(false)} style={{ flex: 1, padding: "7px 0", borderRadius: 7, border: "1px solid #f43f5e44", background: "#f43f5e18", color: "#f43f5e", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <LogOut size={14} />
+          <button onClick={() => setLoggedIn(false)} style={{ flex: 1, height: 38, borderRadius: 10, border: "none", background: "#f43f5e15", color: "#f43f5e", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>
+            <LogOut size={16} />
           </button>
         </div>
       </div>
@@ -778,15 +783,29 @@ export default function App() {
       )}
 
       {/* ── Mobile / Tablet Overlay Sidebar ── */}
-      {!showFixedSidebar && sidebarOpen && (
+      {!showFixedSidebar && (
         <>
           {/* Backdrop */}
           <div
             onClick={() => setSidebarOpen(false)}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 90 }}
+            style={{ 
+              position: "fixed", inset: 0, 
+              background: "rgba(0,0,0,0.4)", 
+              backdropFilter: "blur(4px)",
+              WebkitBackdropFilter: "blur(4px)",
+              zIndex: 90,
+              opacity: sidebarOpen ? 1 : 0,
+              visibility: sidebarOpen ? "visible" : "hidden",
+              transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
           />
           {/* Drawer */}
-          <div style={{ position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 100, height: "100vh" }}>
+          <div style={{ 
+            position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 100, height: "100vh",
+            transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+            transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+            boxShadow: sidebarOpen ? "20px 0 50px rgba(0,0,0,0.3)" : "none",
+          }}>
             <SidebarContent />
           </div>
         </>
